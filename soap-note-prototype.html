@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>WFR SOAP Note v0.3</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0d1117">
+<style>
+:root {
+  --bg:#0d1117;--bg2:#161b22;--card:#1c2128;--card-h:#242a33;
+  --bdr:#30363d;--bdr2:#21262d;
+  --txt:#e6edf3;--txt2:#8b949e;--txt3:#484f58;
+  --pri:#4493f8;--pri-d:#1a3a5c;
+  --red:#f85149;--red-d:#5c1a1a;
+  --grn:#3fb950;--grn-d:#1a3d1f;
+  --yel:#d29922;--yel-d:#4b3a12;
+  --pur:#a371f7;--pur-d:#2d1a4e;
+  --r:12px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;max-width:480px;margin:0 auto;padding-bottom:72px;-webkit-font-smoothing:antialiased}
+
+/* TOP BAR */
+.topbar{background:var(--bg2);border-bottom:1px solid var(--bdr);padding:10px 16px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between}
+.topbar h1{font-size:16px;font-weight:600}.topbar .sub{font-size:10px;color:var(--txt2)}
+.topbar-l{display:flex;align-items:center;gap:8px}
+.back-btn{background:none;border:none;color:var(--pri);font-size:18px;cursor:pointer;padding:4px 6px;display:none}
+.top-badges{display:flex;gap:6px;align-items:center}
+.tbadge{padding:3px 8px;border-radius:16px;font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;display:none}
+.tbadge.timer{background:var(--pri-d);color:var(--pri)}
+.tbadge.rec{background:var(--red-d);color:var(--red);animation:blink 1.5s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:480px;background:var(--bg2);border-top:1px solid var(--bdr);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom,0)}
+.bnav button{flex:1;padding:7px 4px 5px;display:flex;flex-direction:column;align-items:center;cursor:pointer;border:none;background:none;color:var(--txt3);font-size:9px;gap:1px;transition:color .2s}
+.bnav button.on{color:var(--pri)}
+.bnav button svg{width:20px;height:20px}
+
+/* SCREENS */
+.scr{display:none;padding:14px}.scr.on{display:block}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:14px;margin-bottom:10px}
+.card-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.card-t{font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+
+/* BADGES */
+.badge{padding:2px 7px;border-radius:5px;font-size:9px;font-weight:700;letter-spacing:.4px}
+.badge.s{background:var(--pri-d);color:var(--pri)}.badge.o{background:var(--pur-d);color:var(--pur)}
+.badge.a{background:var(--yel-d);color:var(--yel)}.badge.p{background:var(--grn-d);color:var(--grn)}
+.badge.v{background:var(--red-d);color:var(--red)}
+.ai-conf{display:inline-flex;align-items:center;gap:3px;font-size:9px;font-weight:600;padding:2px 5px;border-radius:3px;cursor:pointer}
+.ai-conf.hi{background:var(--grn-d);color:var(--grn)}.ai-conf.md{background:var(--yel-d);color:var(--yel)}.ai-conf.lo{background:var(--red-d);color:var(--red)}
+
+/* FORM */
+.frow{display:flex;gap:8px;margin-bottom:8px}
+.fg{flex:1;display:flex;flex-direction:column}
+.fg label{font-size:10px;font-weight:600;color:var(--txt2);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px}
+.fg input,.fg textarea,.fg select{border:1px solid var(--bdr);border-radius:7px;padding:9px 10px;font-size:14px;font-family:inherit;background:var(--bg2);color:var(--txt);transition:border-color .2s;-webkit-appearance:none}
+.fg input:focus,.fg textarea:focus,.fg select:focus{outline:none;border-color:var(--pri)}
+.fg textarea{resize:vertical;min-height:70px}
+.fg select option{background:var(--card);color:var(--txt)}
+
+/* DICTATION WRAP */
+.dw{position:relative}.dw textarea{padding-right:44px}
+.mic{position:absolute;right:5px;bottom:5px;width:34px;height:34px;border-radius:50%;border:none;background:var(--pri-d);color:var(--pri);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.mic:active,.mic.on{background:var(--red);color:#fff;transform:scale(1.1)}
+.mic.on{animation:mpulse 1.2s ease infinite}
+@keyframes mpulse{0%{box-shadow:0 0 0 0 rgba(248,81,73,.4)}70%{box-shadow:0 0 0 8px rgba(248,81,73,0)}100%{box-shadow:0 0 0 0 rgba(248,81,73,0)}}
+
+/* RECORD BUTTON */
+.rec-hero{display:flex;flex-direction:column;align-items:center;padding:24px 16px 16px;text-align:center}
+.rec-btn{width:130px;height:130px;border-radius:50%;border:3px solid var(--red-d);background:var(--bg2);color:var(--red);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;transition:all .3s}
+.rec-btn:active{transform:scale(.95)}
+.rec-btn.on{border-color:var(--red);background:var(--red-d);animation:rpulse 2s ease infinite}
+@keyframes rpulse{0%,100%{box-shadow:0 0 0 0 rgba(248,81,73,.3)}50%{box-shadow:0 0 0 18px rgba(248,81,73,0)}}
+.rec-btn svg{width:44px;height:44px}
+.rec-btn .rl{font-size:12px;font-weight:700;letter-spacing:1px}
+.rec-btn.on .rl{display:none}
+.rec-btn .rt{font-size:18px;font-weight:700;font-variant-numeric:tabular-nums;display:none}
+.rec-btn.on .rt{display:block}
+.rec-btn.on svg{width:28px;height:28px}
+.rec-hint{font-size:12px;color:var(--txt2);margin-top:14px;max-width:280px;line-height:1.5}
+
+/* TRANSCRIPT */
+.tbox{background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-top:14px;max-height:220px;overflow-y:auto;font-size:13px;line-height:1.5;color:var(--txt2);display:none}
+.tbox.vis{display:block}
+.tline{margin-bottom:6px}.ttime{font-size:9px;color:var(--txt3);font-weight:600;margin-right:4px;font-variant-numeric:tabular-nums}
+
+/* LIVE INDICATOR */
+.live-dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--red);margin-right:4px;animation:blink 1s ease infinite}
+
+/* BUTTONS */
+.btn{padding:10px 16px;border-radius:7px;border:none;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:5px}
+.btn-p{background:var(--pri);color:#fff}.btn-r{background:var(--red);color:#fff}
+.btn-g{background:var(--grn);color:#fff}.btn-o{background:transparent;border:1px solid var(--bdr);color:var(--txt)}
+.btn-f{width:100%;justify-content:center}
+.btn-row{display:flex;gap:6px;margin-top:10px}
+
+/* PATIENT CARDS */
+.pcard{background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .1s;border-left:3px solid var(--pri)}
+.pcard:active{background:var(--card-h)}.pcard.crit{border-left-color:var(--red)}.pcard.stab{border-left-color:var(--grn)}
+.pcard .pn{font-size:14px;font-weight:600}.pcard .pm{font-size:11px;color:var(--txt2);margin-top:2px}
+.pcard .sr{display:flex;align-items:center;gap:6px;margin-top:6px}
+.stag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:3px;text-transform:uppercase;letter-spacing:.4px}
+.stag.act{background:var(--grn-d);color:var(--grn)}.stag.crit{background:var(--red-d);color:var(--red)}
+.stag.xfer{background:var(--pri-d);color:var(--pri)}
+
+/* VITALS TABLE */
+.vtbl{width:100%;border-collapse:collapse;font-size:11px;margin-top:6px}
+.vtbl th{background:var(--bg2);color:var(--txt2);padding:6px 4px;text-align:center;font-weight:600;font-size:9px;text-transform:uppercase;letter-spacing:.3px;border-bottom:1px solid var(--bdr)}
+.vtbl td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--bdr2);font-variant-numeric:tabular-nums}
+.vtbl tr:last-child td{border-bottom:none}
+.tu{color:var(--red);font-weight:600}.td{color:var(--grn);font-weight:600}.ts{color:var(--txt3)}
+
+/* TREND */
+.tchart{display:flex;align-items:flex-end;gap:2px;height:44px;margin-top:6px}
+.tbar{flex:1;background:var(--pri);border-radius:2px 2px 0 0;min-width:6px;transition:height .3s;opacity:.7}
+.tbar.el{background:var(--yel);opacity:1}.tbar.cr{background:var(--red);opacity:1}
+.tlbl{display:flex;justify-content:space-between;font-size:9px;color:var(--txt3);margin-top:3px}
+
+/* MODE TOGGLE */
+.mtog{display:flex;background:var(--bg);border-radius:7px;border:1px solid var(--bdr);overflow:hidden;margin-bottom:14px}
+.mtog button{flex:1;padding:9px;border:none;background:transparent;color:var(--txt2);font-size:12px;font-weight:600;cursor:pointer;transition:all .2s}
+.mtog button.on{background:var(--pri-d);color:var(--pri)}
+
+/* EXPORT */
+.eopt{display:flex;align-items:center;gap:12px;padding:12px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:var(--r);margin-bottom:8px;cursor:pointer;transition:all .1s}
+.eopt:active{background:var(--card-h)}
+.eico{width:38px;height:38px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+.eico.pdf{background:var(--red-d);color:var(--red)}.eico.air{background:var(--pri-d);color:var(--pri)}
+.eico.txt{background:var(--grn-d);color:var(--grn)}.eico.eml{background:var(--yel-d);color:var(--yel)}
+.elbl{font-weight:600;font-size:13px}.edsc{font-size:10px;color:var(--txt2)}
+
+/* COLLAPSE */
+.ctog{width:100%;background:none;border:none;display:flex;align-items:center;justify-content:space-between;cursor:pointer;padding:0;color:var(--txt)}
+.ctog .arr{transition:transform .2s;font-size:12px;color:var(--txt3)}
+.ctog.op .arr{transform:rotate(90deg)}
+.ccnt{max-height:0;overflow:hidden;transition:max-height .3s ease}.ccnt.op{max-height:3000px}
+
+/* MODAL */
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:200;align-items:flex-end;justify-content:center}
+.modal.on{display:flex}
+.msheet{background:var(--bg2);border:1px solid var(--bdr);width:100%;max-width:480px;border-radius:16px 16px 0 0;padding:16px 14px 28px;max-height:80vh;overflow-y:auto}
+.mhandle{width:32px;height:3px;background:var(--bdr);border-radius:2px;margin:0 auto 14px}
+.mtitle{font-size:16px;font-weight:700;margin-bottom:14px;text-align:center}
+
+/* AVPU */
+.avpu-r{display:flex;gap:5px}
+.avpu-b{flex:1;padding:9px 3px;border:1px solid var(--bdr);border-radius:7px;background:var(--bg);font-size:12px;font-weight:700;cursor:pointer;text-align:center;color:var(--txt2);transition:all .15s}
+.avpu-b.sel{background:var(--pri-d);color:var(--pri);border-color:var(--pri)}
+
+/* MISC */
+.slbl{font-size:10px;font-weight:700;color:var(--txt3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 6px}
+.toast{position:fixed;top:60px;left:50%;transform:translateX(-50%) translateY(-80px);background:var(--card);border:1px solid var(--bdr);color:var(--txt);padding:8px 16px;border-radius:7px;font-size:12px;font-weight:500;z-index:300;transition:transform .3s ease;white-space:nowrap}
+.toast.show{transform:translateX(-50%) translateY(0)}
+.fab{position:fixed;bottom:68px;right:calc(50% - 210px);width:48px;height:48px;border-radius:50%;background:var(--pri);color:#fff;border:none;box-shadow:0 3px 10px rgba(0,0,0,.4);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:50}
+.proc-ov{display:none;position:fixed;inset:0;z-index:250;background:rgba(13,17,23,.92);flex-direction:column;align-items:center;justify-content:center;gap:16px}
+.proc-ov.on{display:flex}
+.spinner{width:40px;height:40px;border:3px solid var(--bdr);border-top-color:var(--pri);border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.handoff{font-family:'SF Mono','Fira Code',monospace;font-size:10px;line-height:1.6;background:var(--bg);border:1px solid var(--bdr);padding:10px;border-radius:7px;white-space:pre-wrap;color:var(--txt2)}
+
+/* REVIEW FIELD */
+.rf{padding:10px;border-radius:7px;margin-bottom:6px;background:var(--bg2);border:1px solid var(--bdr);cursor:pointer;transition:border-color .2s}
+.rf:active{border-color:var(--pri)}
+.rf .rfl{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
+.rf .rfl span:first-child{font-size:10px;font-weight:600;color:var(--txt2);text-transform:uppercase;letter-spacing:.3px}
+.rf .rfv{font-size:13px;line-height:1.4}
+.rf .rfa{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--pri);margin-top:4px;cursor:pointer}
+.rf.flag{border-color:var(--yel)}.rf.ok{border-left:3px solid var(--grn)}
+
+/* NEW PATIENT MODAL */
+.np-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:250;align-items:center;justify-content:center}
+.np-bg.on{display:flex}
+.np-card{background:var(--bg2);border:1px solid var(--bdr);border-radius:16px;padding:20px 16px;width:90%;max-width:440px;max-height:85vh;overflow-y:auto}
+
+/* PRINT */
+@media print{
+  body{background:#fff!important;color:#000!important;max-width:100%!important}
+  .topbar,.bnav,.fab,.btn-row,.add-v-btn,.toast,.mtog{display:none!important}
+  .scr{display:block!important;padding:0!important}
+  .card{background:#fff!important;border:1px solid #ccc!important;color:#000!important;page-break-inside:avoid}
+  .fg input,.fg textarea,.fg select{background:#fff!important;color:#000!important;border:1px solid #999!important}
+  .vtbl th{background:#eee!important;color:#333!important}
+  .badge{border:1px solid #999!important}
+  .ccnt{max-height:none!important}
+  .handoff{background:#f5f5f5!important;color:#333!important}
+  #homeScreen,#scribeScreen,#draftScreen,#settingsScreen{display:none!important}
+  #soapPrintView{display:block!important}
+}
+#soapPrintView{display:none}
+</style>
+</head>
+<body>
+<div class="toast" id="toast"></div>
+<div class="proc-ov" id="procOv"><div class="spinner"></div><div style="font-size:15px;font-weight:600">Extracting SOAP data...</div><div style="font-size:12px;color:var(--txt2)">Processing transcript</div></div>
+
+<!-- NEW PATIENT MODAL -->
+<div class="np-bg" id="npModal">
+<div class="np-card">
+  <div style="font-size:17px;font-weight:700;margin-bottom:14px;text-align:center">New Patient</div>
+  <div class="frow"><div class="fg" style="flex:2"><label>Name</label><input id="npName" type="text" placeholder="Patient name"></div><div class="fg"><label>Age</label><input id="npAge" type="number" placeholder="Age" inputmode="numeric"></div></div>
+  <div class="frow"><div class="fg"><label>Gender</label><select id="npGender"><option>Female</option><option>Male</option><option>Non-binary</option><option>Other</option></select></div><div class="fg"><label>Weight</label><input id="npWeight" type="text" placeholder="kg or lbs"></div></div>
+  <div class="frow"><div class="fg"><label>Chief Complaint</label><input id="npCC" type="text" placeholder="Brief description"></div></div>
+  <div class="frow"><div class="fg"><label>Location</label><input id="npLoc" type="text" placeholder="GPS or description"></div></div>
+  <div class="btn-row"><button class="btn btn-o" style="flex:1" onclick="closeNewPatient()">Cancel</button><button class="btn btn-p" style="flex:2" onclick="createPatient()">Create Patient</button></div>
+</div>
+</div>
+
+<!-- VITALS MODAL -->
+<div class="modal" id="vModal">
+<div class="msheet">
+  <div class="mhandle"></div><div class="mtitle">Record Vitals</div>
+  <div style="text-align:center;font-size:12px;color:var(--txt2);margin-bottom:14px" id="vTs"></div>
+  <div class="fg" style="margin-bottom:12px"><label>AVPU</label>
+    <div class="avpu-r"><button class="avpu-b sel" onclick="selAVPU(this)">A<br><span style="font-size:8px;font-weight:400">Alert</span></button><button class="avpu-b" onclick="selAVPU(this)">V<br><span style="font-size:8px;font-weight:400">Verbal</span></button><button class="avpu-b" onclick="selAVPU(this)">P<br><span style="font-size:8px;font-weight:400">Pain</span></button><button class="avpu-b" onclick="selAVPU(this)">U<br><span style="font-size:8px;font-weight:400">Unresponsive</span></button></div>
+  </div>
+  <div class="frow"><div class="fg"><label>Pulse (bpm)</label><input type="number" id="vP" placeholder="72" inputmode="numeric"></div><div class="fg"><label>Resp Rate</label><input type="number" id="vR" placeholder="16" inputmode="numeric"></div></div>
+  <div class="fg" style="margin-bottom:12px"><label>Skin</label><input type="text" id="vSk" placeholder="Color, temp, moisture"></div>
+  <div class="frow"><div class="fg"><label>SpO2 %</label><input type="number" id="vSp" placeholder="98" inputmode="numeric"></div><div class="fg"><label>BP</label><input type="text" id="vBP" placeholder="120/80"></div></div>
+  <div class="btn-row"><button class="btn btn-o" style="flex:1" onclick="closeVModal()">Cancel</button><button class="btn btn-p" style="flex:2" onclick="saveVitals()">Save Vitals</button></div>
+</div>
+</div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="topbar-l"><button class="back-btn" id="backBtn" onclick="goHome()">&#8592;</button><div><h1 id="topT">WFR SOAP Note</h1><div class="sub" id="topS">Alaska Alpine Adventures</div></div></div>
+  <div class="top-badges"><div class="tbadge rec" id="recBadge">REC</div><div class="tbadge timer" id="timerBadge">00:00</div></div>
+</div>
+
+<!-- ===== HOME ===== -->
+<div class="scr on" id="homeScreen">
+  <div class="slbl">Active Patients</div>
+  <div id="patientList"></div>
+  <div id="xferList"></div>
+</div>
+
+<!-- ===== SCRIBE ===== -->
+<div class="scr" id="scribeScreen">
+  <div class="mtog"><button class="on" id="mScribe" onclick="setMode('scribe')">AI Scribe</button><button id="mManual" onclick="setMode('manual')">Manual Entry</button></div>
+
+  <!-- AI SCRIBE -->
+  <div id="scribeView">
+    <div class="rec-hero">
+      <button class="rec-btn" id="recBtn" onclick="toggleRec()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        <span class="rl">RECORD</span><span class="rt" id="recTimer">00:00</span>
+      </button>
+      <div class="rec-hint" id="recHint">Tap to start recording. Talk naturally — the app uses your device's speech recognition to build a live transcript.</div>
+    </div>
+    <div class="tbox" id="tBox"><div id="tContent"></div></div>
+    <div id="stopArea" style="display:none;text-align:center;margin-top:14px">
+      <button class="btn btn-r btn-f" onclick="stopAndProcess()">&#9632; Stop &amp; Generate SOAP Note</button>
+    </div>
+    <div id="sttNotice" style="display:none;text-align:center;margin-top:10px;font-size:11px;color:var(--yel)"></div>
+  </div>
+
+  <!-- MANUAL ENTRY -->
+  <div id="manualView" style="display:none">
+    <div class="card"><div class="card-hd"><div class="card-t">Patient Info</div></div>
+      <div class="frow"><div class="fg" style="flex:2"><label>Name</label><input type="text" id="fName"></div><div class="fg"><label>Age</label><input type="number" id="fAge"></div></div>
+      <div class="frow"><div class="fg"><label>Gender</label><select id="fGender"><option>Female</option><option>Male</option><option>Non-binary</option><option>Other</option></select></div><div class="fg"><label>Weight</label><input type="text" id="fWeight"></div></div>
+      <div class="frow"><div class="fg" style="flex:2"><label>Emergency Contact</label><input type="text" id="fEC"></div><div class="fg"><label>Phone</label><input type="tel" id="fPhone"></div></div>
+      <div class="frow"><div class="fg"><label>Location</label><input type="text" id="fLoc"></div><div class="fg"><label>Date</label><input type="date" id="fDate"></div></div>
+      <div class="frow"><div class="fg"><label>Time on Scene</label><input type="time" id="fTime"></div><div class="fg"><label>Provider</label><input type="text" id="fProvider"></div></div>
+    </div>
+    <div class="card"><button class="ctog op" onclick="tog(this)"><div class="card-t"><span class="badge s">S</span> Subjective</div><span class="arr">&#9654;</span></button><div class="ccnt op"><div style="margin-top:10px">
+      <div class="fg"><label>Scene / MOI</label><div class="dw"><textarea id="fScene" rows="3" placeholder="Describe the scene..."></textarea><button class="mic" onclick="fieldMic(this,'fScene')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      <div class="slbl" style="margin-top:12px">SAMPLE History</div>
+      <div class="fg" style="margin-bottom:8px"><label>Symptoms</label><div class="dw"><textarea id="fSymptoms" rows="2" placeholder="Chief complaint..."></textarea><button class="mic" onclick="fieldMic(this,'fSymptoms')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      <div class="frow"><div class="fg"><label>Allergies</label><input type="text" id="fAllergies" placeholder="NKDA"></div><div class="fg"><label>Medications</label><input type="text" id="fMeds"></div></div>
+      <div class="fg" style="margin-bottom:8px"><label>Pertinent Hx</label><input type="text" id="fHx"></div>
+      <div class="frow"><div class="fg"><label>Last In/Out</label><input type="text" id="fLastIO"></div><div class="fg"><label>Events</label><input type="text" id="fEvents"></div></div>
+    </div></div></div>
+    <div class="card"><button class="ctog op" onclick="tog(this)"><div class="card-t"><span class="badge o">O</span> Objective</div><span class="arr">&#9654;</span></button><div class="ccnt op"><div style="margin-top:10px">
+      <div class="fg"><label>Physical Exam</label><div class="dw"><textarea id="fExam" rows="3" placeholder="Head-to-toe findings..."></textarea><button class="mic" onclick="fieldMic(this,'fExam')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+    </div></div></div>
+    <!-- VITALS -->
+    <div class="card"><div class="card-hd"><div class="card-t"><span class="badge v">V</span> Serial Vitals</div><span style="font-size:10px;color:var(--txt3)" id="vCnt">0</span></div>
+      <div style="margin-bottom:10px"><div style="font-size:10px;font-weight:600;color:var(--txt3)">PULSE TREND</div><div class="tchart" id="pTrend"></div><div class="tlbl" id="tLbl"></div></div>
+      <div style="overflow-x:auto"><table class="vtbl"><thead><tr><th>Time</th><th>AVPU</th><th>Pulse</th><th>RR</th><th>Skin</th><th>Other</th></tr></thead><tbody id="vBody"></tbody></table></div>
+      <button class="btn btn-o btn-f add-v-btn" style="margin-top:8px;font-size:12px" onclick="openVModal()">+ Record New Vitals</button>
+    </div>
+    <div class="card"><button class="ctog op" onclick="tog(this)"><div class="card-t"><span class="badge a">A</span> Assessment</div><span class="arr">&#9654;</span></button><div class="ccnt op"><div style="margin-top:10px">
+      <div class="fg" style="margin-bottom:8px"><label>A — Problem List</label><div class="dw"><textarea id="fProblems" rows="2" placeholder="What do you think is wrong?"></textarea><button class="mic" onclick="fieldMic(this,'fProblems')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      <div class="fg" style="margin-bottom:8px"><label>A' — Anticipated Problems</label><div class="dw"><textarea id="fAnticipated" rows="2" placeholder="What could go wrong?"></textarea><button class="mic" onclick="fieldMic(this,'fAnticipated')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+    </div></div></div>
+    <div class="card"><button class="ctog op" onclick="tog(this)"><div class="card-t"><span class="badge p">P</span> Treatment Plan</div><span class="arr">&#9654;</span></button><div class="ccnt op"><div style="margin-top:10px">
+      <div class="fg"><label>Plan</label><div class="dw"><textarea id="fPlan" rows="3" placeholder="Treatment steps..."></textarea><button class="mic" onclick="fieldMic(this,'fPlan')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+    </div></div></div>
+    <div class="card"><button class="ctog" onclick="tog(this)"><div class="card-t">Additional Notes</div><span class="arr">&#9654;</span></button><div class="ccnt"><div style="margin-top:10px">
+      <div class="fg"><label>Notes</label><div class="dw"><textarea id="fNotes" rows="3" placeholder="Additional observations..."></textarea><button class="mic" onclick="fieldMic(this,'fNotes')"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg></button></div></div>
+      <div class="fg" style="margin-top:8px"><label>Care Transfer Info</label><input type="text" id="fTransfer" placeholder="Agency, location, time..."></div>
+    </div></div></div>
+    <div class="btn-row" style="margin-bottom:16px">
+      <button class="btn btn-o" style="flex:1" onclick="saveCurrentNote()">Save</button>
+      <button class="btn btn-p" style="flex:2" onclick="switchTab('exportScreen')">Export / Share</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EXPORT ===== -->
+<div class="scr" id="exportScreen">
+  <div class="slbl">Export Patient Record</div>
+  <div class="eopt" onclick="exportPDF()"><div class="eico pdf">&#128196;</div><div><div class="elbl">Print / Save as PDF</div><div class="edsc">Uses browser print — save as PDF</div></div></div>
+  <div class="eopt" onclick="shareNote()"><div class="eico air">&#128225;</div><div><div class="elbl">Share</div><div class="edsc">Native share sheet (text, email, AirDrop)</div></div></div>
+  <div class="eopt" onclick="copyJSON()"><div class="eico txt">&#128203;</div><div><div class="elbl">Copy as JSON</div><div class="edsc">Copy structured data to clipboard</div></div></div>
+  <div class="eopt" onclick="downloadJSON()"><div class="eico eml">&#128229;</div><div><div class="elbl">Download JSON File</div><div class="edsc">Save to device for database import</div></div></div>
+  <div class="card" style="margin-top:14px"><div class="card-t" style="margin-bottom:10px">Handoff Summary</div><div class="handoff" id="handoffPre"></div></div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="scr" id="settingsScreen">
+  <div class="slbl">Provider Profile</div>
+  <div class="card">
+    <div class="fg" style="margin-bottom:8px"><label>Name</label><input type="text" id="sName" value="Nico" onchange="saveSetting()"></div>
+    <div class="fg" style="margin-bottom:8px"><label>Certification</label><select id="sCert" onchange="saveSetting()"><option>WFR</option><option>WAFA</option><option>WEMT</option><option>WFR-SOLO</option><option>EMT</option><option>Paramedic</option></select></div>
+    <div class="fg"><label>Organization</label><input type="text" id="sOrg" value="Alaska Alpine Adventures" onchange="saveSetting()"></div>
+  </div>
+  <div class="slbl">Data</div>
+  <div class="card">
+    <div style="margin-bottom:10px"><div style="font-weight:600;font-size:12px">Patients stored: <span id="ptCount">0</span></div></div>
+    <div class="btn-row"><button class="btn btn-o" style="flex:1;font-size:11px" onclick="exportAllData()">Export All Data</button><button class="btn btn-o" style="flex:1;font-size:11px" onclick="importData()">Import Data</button></div>
+    <div class="btn-row"><button class="btn btn-r" style="flex:1;font-size:11px" onclick="if(confirm('Delete ALL patient data?')){localStorage.removeItem('wfr_patients');loadPatients();toast('All data cleared')}">Clear All Data</button></div>
+  </div>
+  <input type="file" id="importFile" accept=".json" style="display:none" onchange="handleImport(event)">
+  <div style="text-align:center;margin-top:20px;color:var(--txt3);font-size:10px">WFR SOAP Note v0.3 — Functional Prototype<br>Alaska Alpine Adventures &copy; 2026<br><br>Speech recognition uses your device's<br>built-in Web Speech API (works offline on iOS)</div>
+</div>
+
+<!-- PRINT VIEW -->
+<div id="soapPrintView"></div>
+
+<!-- BOTTOM NAV -->
+<div class="bnav">
+  <button class="on" id="navH" onclick="switchTab('homeScreen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Patients</button>
+  <button id="navS" onclick="switchTab('scribeScreen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>Scribe</button>
+  <button id="navE" onclick="switchTab('exportScreen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>Export</button>
+  <button id="navSt" onclick="switchTab('settingsScreen')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</button>
+</div>
+<button class="fab" onclick="openNewPatient()" title="New Patient">+</button>
+
+<script>
+// ===== STATE =====
+let patients = [];
+let activeIdx = -1;
+let isRec = false, recSec = 0, recInt = null;
+let sceneSec = 0, sceneInt = null;
+let recognition = null;
+let fullTranscript = '';
+let sttSupported = false;
+
+// ===== STORAGE =====
+function save() { localStorage.setItem('wfr_patients', JSON.stringify(patients)); updatePtCount(); }
+function load() {
+  try { patients = JSON.parse(localStorage.getItem('wfr_patients')) || []; } catch(e) { patients = []; }
+  if (!patients.length) seedDemo();
+  updatePtCount();
+}
+function updatePtCount() { const el = document.getElementById('ptCount'); if(el) el.textContent = patients.length; }
+
+function seedDemo() {
+  patients = [{
+    id: Date.now(), name:'Sarah Chen', age:34, gender:'Female', weight:'62 kg',
+    ec:'James Chen', phone:'907-555-0142', location:'63.069, -151.007',
+    date:'2026-04-17', timeOnScene:'14:35', provider:'Nico / WFR',
+    scene:'Glacier crevasse field. Patient fell ~20 feet after slipping on ice. Landed on left side. Single impact. Scene secure.',
+    symptoms:'Left shoulder pain, sharp, 8/10. Cannot move left arm. No numbness/tingling.',
+    allergies:'Penicillin', meds:'Lisinopril', hx:'Prior dislocations, left shoulder',
+    lastIO:'Breakfast 3hrs ago, good hydration', events:'Slipped on ice, no LOC',
+    exam:'Anterior left shoulder — visible deformity, severe tenderness on palpation, ~15-degree abduction. No neurovascular deficit distally. Radial pulse strong, symmetric. Sensation intact all digits.',
+    problems:'Suspected anterior left shoulder dislocation. Rule out neurovascular compromise.',
+    anticipated:'Shock progression. Neurovascular deterioration. Hypothermia if evacuation delayed.',
+    plan:'Immobilized left shoulder — sling/swathe. Neuro checks q5min. Pain management per protocol. SAR activated 14:40.',
+    notes:'', transfer:'',
+    vitals:[
+      {time:'14:35',avpu:'A',pulse:88,rr:16,skin:'Warm, dry',other:'—'},
+      {time:'14:45',avpu:'A',pulse:96,rr:18,skin:'Sl. cool',other:'SpO2 97%'},
+      {time:'14:55',avpu:'A',pulse:102,rr:20,skin:'Pale, moist',other:'SpO2 96%'},
+      {time:'15:05',avpu:'A',pulse:100,rr:19,skin:'Pale, moist',other:'SpO2 96%'},
+    ],
+    status:'active', cc:'Shoulder dislocation', created: Date.now()
+  }];
+  save();
+}
+
+function getSettings() {
+  try { return JSON.parse(localStorage.getItem('wfr_settings')) || {name:'Nico',cert:'WFR',org:'Alaska Alpine Adventures'}; }
+  catch(e) { return {name:'Nico',cert:'WFR',org:'Alaska Alpine Adventures'}; }
+}
+function saveSetting() {
+  const s = {name:document.getElementById('sName').value, cert:document.getElementById('sCert').value, org:document.getElementById('sOrg').value};
+  localStorage.setItem('wfr_settings', JSON.stringify(s));
+}
+
+// ===== SPEECH RECOGNITION =====
+function initSTT() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { sttSupported = false; return; }
+  sttSupported = true;
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = 'en-US';
+}
+
+// ===== RENDER PATIENTS =====
+function renderPatients() {
+  const list = document.getElementById('patientList');
+  const xfer = document.getElementById('xferList');
+  let activeHTML = '', xferHTML = '';
+  patients.forEach((p, i) => {
+    const lastV = p.vitals?.length ? p.vitals[p.vitals.length-1] : null;
+    const elapsed = lastV ? timeSince(lastV.time) : '';
+    const cls = p.status === 'critical' ? 'crit' : p.status === 'active' ? 'stab' : '';
+    const tagCls = p.status === 'critical' ? 'crit' : p.status === 'transferred' ? 'xfer' : 'act';
+    const tagTxt = p.status === 'critical' ? 'Guarded' : p.status === 'transferred' ? 'Transferred' : 'Active';
+    const html = `<div class="pcard ${cls}" onclick="openPatient(${i})" ${p.status==='transferred'?'style="opacity:.5"':''}>
+      <div class="pn">${esc(p.name||'Unnamed')}</div>
+      <div class="pm">${esc(p.cc||'No chief complaint')} &bull; ${esc(p.location||'No location')}</div>
+      <div class="sr"><span class="stag ${tagCls}">${tagTxt}</span>${lastV?`<span style="font-size:10px;color:var(--txt3)">Last vitals: ${elapsed}</span>`:''}</div>
+    </div>`;
+    if (p.status === 'transferred') xferHTML += html;
+    else activeHTML += html;
+  });
+  list.innerHTML = activeHTML || '<div style="text-align:center;padding:20px;color:var(--txt3);font-size:13px">No active patients. Tap + to create one.</div>';
+  if (xferHTML) xfer.innerHTML = '<div class="slbl" style="margin-top:18px">Closed / Transferred</div>' + xferHTML;
+  else xfer.innerHTML = '';
+}
+
+function timeSince(timeStr) {
+  if (!timeStr) return '';
+  const now = new Date();
+  const [h,m] = timeStr.split(':').map(Number);
+  const then = new Date(); then.setHours(h,m,0,0);
+  const diff = Math.floor((now - then)/60000);
+  if (diff < 1) return 'just now';
+  if (diff < 60) return diff + ' min ago';
+  return Math.floor(diff/60) + 'h ago';
+}
+
+// ===== PATIENT CRUD =====
+function openNewPatient() { document.getElementById('npModal').classList.add('on'); document.getElementById('npName').focus(); }
+function closeNewPatient() { document.getElementById('npModal').classList.remove('on'); }
+
+function createPatient() {
+  const name = document.getElementById('npName').value.trim();
+  if (!name) { toast('Enter patient name'); return; }
+  const now = new Date();
+  const p = {
+    id: Date.now(), name, age: document.getElementById('npAge').value||'',
+    gender: document.getElementById('npGender').value, weight: document.getElementById('npWeight').value,
+    ec:'', phone:'', location: document.getElementById('npLoc').value||'',
+    date: now.toISOString().split('T')[0],
+    timeOnScene: now.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false}),
+    provider: getSettings().name + ' / ' + getSettings().cert,
+    scene:'', symptoms:'', allergies:'', meds:'', hx:'', lastIO:'', events:'',
+    exam:'', problems:'', anticipated:'', plan:'', notes:'', transfer:'',
+    vitals:[], status:'active', cc: document.getElementById('npCC').value||'',
+    created: Date.now()
+  };
+  patients.unshift(p);
+  save(); renderPatients(); closeNewPatient();
+  ['npName','npAge','npWeight','npCC','npLoc'].forEach(id=>document.getElementById(id).value='');
+  openPatient(0);
+  toast('Patient created: '+name);
+}
+
+function openPatient(i) {
+  activeIdx = i;
+  loadForm(patients[i]);
+  switchTab('scribeScreen');
+  setMode('manual');
+  startSceneTimer();
+}
+
+// ===== FORM LOAD/SAVE =====
+const formFields = ['Name','Age','Gender','Weight','EC','Phone','Loc','Date','Time','Provider','Scene','Symptoms','Allergies','Meds','Hx','LastIO','Events','Exam','Problems','Anticipated','Plan','Notes','Transfer'];
+const dataKeys = ['name','age','gender','weight','ec','phone','location','date','timeOnScene','provider','scene','symptoms','allergies','meds','hx','lastIO','events','exam','problems','anticipated','plan','notes','transfer'];
+
+function loadForm(p) {
+  formFields.forEach((f,i) => {
+    const el = document.getElementById('f'+f);
+    if (el) el.value = p[dataKeys[i]] || '';
+  });
+  renderVitals();
+  updateHandoff();
+}
+
+function saveCurrentNote() {
+  if (activeIdx < 0) return;
+  const p = patients[activeIdx];
+  formFields.forEach((f,i) => {
+    const el = document.getElementById('f'+f);
+    if (el) p[dataKeys[i]] = el.value;
+  });
+  save();
+  toast('Note saved');
+}
+
+// Auto-save on input change
+document.addEventListener('input', (e) => {
+  if (activeIdx >= 0 && e.target.id && e.target.id.startsWith('f')) {
+    const p = patients[activeIdx];
+    const idx = formFields.findIndex(f => 'f'+f === e.target.id);
+    if (idx >= 0) { p[dataKeys[idx]] = e.target.value; save(); }
+  }
+});
+
+// ===== VITALS =====
+function renderVitals() {
+  if (activeIdx < 0) return;
+  const v = patients[activeIdx].vitals || [];
+  const tbody = document.getElementById('vBody');
+  tbody.innerHTML = '';
+  v.forEach((vt,i) => {
+    const tr = document.createElement('tr');
+    let pt = '';
+    if (i > 0) {
+      const d = vt.pulse - v[i-1].pulse;
+      if (d > 4) pt = `<span class="tu">&#9650;${d}</span>`;
+      else if (d < -4) pt = `<span class="td">&#9660;${Math.abs(d)}</span>`;
+      else pt = `<span class="ts">—</span>`;
+    }
+    tr.innerHTML = `<td style="font-weight:600">${vt.time}</td><td>${vt.avpu}</td><td>${vt.pulse} ${pt}</td><td>${vt.rr}</td><td style="font-size:10px">${esc(vt.skin)}</td><td style="font-size:10px">${esc(vt.other)}</td>`;
+    tbody.appendChild(tr);
+  });
+  document.getElementById('vCnt').textContent = v.length + ' recorded';
+  // Trend
+  const tc = document.getElementById('pTrend');
+  const tl = document.getElementById('tLbl');
+  tc.innerHTML = ''; tl.innerHTML = '';
+  if (v.length) {
+    const mx = Math.max(...v.map(x=>x.pulse));
+    const mn = Math.min(...v.map(x=>x.pulse))-10;
+    v.forEach(x => {
+      const h = ((x.pulse-mn)/(mx-mn))*100;
+      const bar = document.createElement('div');
+      bar.className = 'tbar'+(x.pulse>=100?' el':'')+(x.pulse>=110?' cr':'');
+      bar.style.height = Math.max(h,10)+'%';
+      tc.appendChild(bar);
+    });
+    tl.innerHTML = v.map(x=>`<span>${x.time}</span>`).join('');
+  }
+}
+
+function openVModal() {
+  const ts = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+  document.getElementById('vTs').textContent = 'Recording at '+ts;
+  document.getElementById('vModal').classList.add('on');
+  ['vP','vR','vSk','vSp','vBP'].forEach(id=>document.getElementById(id).value='');
+  document.querySelectorAll('.avpu-b').forEach((b,i)=>b.classList.toggle('sel',i===0));
+}
+function closeVModal() { document.getElementById('vModal').classList.remove('on'); }
+function selAVPU(el) { el.parentElement.querySelectorAll('.avpu-b').forEach(b=>b.classList.remove('sel')); el.classList.add('sel'); }
+
+function saveVitals() {
+  if (activeIdx < 0) return;
+  const ts = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false});
+  const avpu = document.querySelector('.avpu-b.sel')?.textContent.trim().charAt(0)||'A';
+  const pulse = parseInt(document.getElementById('vP').value)||0;
+  if (!pulse) { toast('Enter at least pulse'); return; }
+  const rr = parseInt(document.getElementById('vR').value)||0;
+  const skin = document.getElementById('vSk').value||'—';
+  const spo2 = document.getElementById('vSp').value;
+  const bp = document.getElementById('vBP').value;
+  let other = [];
+  if (spo2) other.push('SpO2 '+spo2+'%');
+  if (bp) other.push('BP '+bp);
+  patients[activeIdx].vitals.push({time:ts,avpu,pulse,rr,skin,other:other.join(', ')||'—'});
+  save(); renderVitals(); closeVModal();
+  toast('Vitals recorded at '+ts);
+}
+
+// ===== RECORDING (REAL STT) =====
+function toggleRec() {
+  if (!isRec) startRec(); else stopAndProcess();
+}
+
+function startRec() {
+  isRec = true; recSec = 0; fullTranscript = '';
+  document.getElementById('recBtn').classList.add('on');
+  document.getElementById('recBadge').style.display = 'inline-block';
+  document.getElementById('recHint').textContent = 'Recording... speak naturally.';
+  document.getElementById('stopArea').style.display = 'block';
+  document.getElementById('tBox').classList.add('vis');
+  document.getElementById('tContent').innerHTML = '';
+
+  recInt = setInterval(() => {
+    recSec++;
+    const m = Math.floor(recSec/60), s = recSec%60;
+    document.getElementById('recTimer').textContent = String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  },1000);
+
+  if (sttSupported) {
+    try {
+      recognition.onresult = (e) => {
+        let interim = '', final = '';
+        for (let i = e.resultIndex; i < e.results.length; i++) {
+          const t = e.results[i][0].transcript;
+          if (e.results[i].isFinal) { final += t; } else { interim += t; }
+        }
+        if (final) {
+          fullTranscript += final + ' ';
+          addTranscriptLine(final.trim());
+        }
+        if (interim) updateInterim(interim);
+      };
+      recognition.onerror = (e) => {
+        if (e.error === 'no-speech') return;
+        console.log('STT error:', e.error);
+      };
+      recognition.onend = () => { if (isRec) { try { recognition.start(); } catch(e){} } };
+      recognition.start();
+    } catch(e) {
+      document.getElementById('sttNotice').style.display = 'block';
+      document.getElementById('sttNotice').textContent = 'Speech recognition error: ' + e.message;
+    }
+  } else {
+    document.getElementById('sttNotice').style.display = 'block';
+    document.getElementById('sttNotice').textContent = 'Speech recognition not available in this browser. Try Chrome or Safari. You can still use manual entry mode.';
+  }
+}
+
+function addTranscriptLine(text) {
+  const m = Math.floor(recSec/60), s = recSec%60;
+  const ts = String(m).padStart(1,'0')+':'+String(s).padStart(2,'0');
+  const el = document.createElement('div');
+  el.className = 'tline';
+  el.innerHTML = `<span class="ttime">${ts}</span>${esc(text)}`;
+  const old = document.getElementById('tContent').querySelector('.interim');
+  if (old) old.remove();
+  document.getElementById('tContent').appendChild(el);
+  document.getElementById('tBox').scrollTop = 9999;
+}
+
+function updateInterim(text) {
+  let el = document.getElementById('tContent').querySelector('.interim');
+  if (!el) {
+    el = document.createElement('div');
+    el.className = 'tline interim';
+    el.style.color = 'var(--txt3)';
+    el.style.fontStyle = 'italic';
+    document.getElementById('tContent').appendChild(el);
+  }
+  el.innerHTML = '<span class="live-dot"></span>' + esc(text);
+  document.getElementById('tBox').scrollTop = 9999;
+}
+
+function stopAndProcess() {
+  isRec = false;
+  clearInterval(recInt);
+  if (recognition) try { recognition.stop(); } catch(e){}
+  document.getElementById('recBtn').classList.remove('on');
+  document.getElementById('recBadge').style.display = 'none';
+  document.getElementById('stopArea').style.display = 'none';
+  document.getElementById('sttNotice').style.display = 'none';
+
+  if (!fullTranscript.trim()) {
+    toast('No speech detected — try manual entry');
+    return;
+  }
+
+  document.getElementById('procOv').classList.add('on');
+  setTimeout(() => {
+    const extracted = parseTranscript(fullTranscript);
+    if (activeIdx >= 0) {
+      const p = patients[activeIdx];
+      Object.keys(extracted).forEach(k => { if (extracted[k] && !p[k]) p[k] = extracted[k]; });
+      save();
+      loadForm(p);
+    }
+    document.getElementById('procOv').classList.remove('on');
+    setMode('manual');
+    toast('Transcript processed — review and edit fields');
+  }, 1500);
+}
+
+// ===== BASIC TRANSCRIPT PARSER =====
+function parseTranscript(text) {
+  const t = text.toLowerCase();
+  const result = {};
+
+  // Extract name
+  const nameMatch = text.match(/(?:patient|name)\s+(?:is\s+)?([A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)/);
+  if (nameMatch) result.name = nameMatch[1];
+
+  // Extract age
+  const ageMatch = t.match(/(\d{1,3})\s*(?:year|yr)s?\s*old/);
+  if (ageMatch) result.age = ageMatch[1];
+
+  // Allergies
+  const allergyMatch = t.match(/allerg(?:y|ies|ic)\s+(?:to\s+)?([^,.]+)/);
+  if (allergyMatch) result.allergies = allergyMatch[1].trim();
+
+  // Medications
+  const medMatch = t.match(/(?:taking|medication|meds?)\s+(?:is\s+|are\s+)?([^,.]+)/);
+  if (medMatch) result.meds = medMatch[1].trim();
+
+  // Pulse
+  const pulseMatch = t.match(/pulse\s+(?:is\s+|of\s+)?(\d{2,3})/);
+  // Resp
+  const rrMatch = t.match(/(?:resp|respiration|breathing)\s+(?:rate\s+)?(?:is\s+|of\s+)?(\d{1,2})/);
+
+  // Scene goes to scene field
+  result.scene = text.substring(0, Math.min(text.length, 200));
+  // Symptoms from patient-reported content
+  const symptomPhrases = text.match(/(?:hurts?|pain|can't|cannot|numbness|tingling|dizzy|nausea)[^.]*\./gi);
+  if (symptomPhrases) result.symptoms = symptomPhrases.join(' ').trim();
+
+  return result;
+}
+
+// ===== PER-FIELD DICTATION =====
+function fieldMic(btn, fieldId) {
+  if (!sttSupported) { toast('Speech not available — try Chrome or Safari'); return; }
+  if (btn.classList.contains('on')) {
+    btn.classList.remove('on');
+    if (recognition) try { recognition.stop(); } catch(e){}
+    return;
+  }
+  // Stop any other active mic
+  document.querySelectorAll('.mic.on').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+
+  const field = document.getElementById(fieldId);
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const rec = new SR();
+  rec.continuous = true; rec.interimResults = true; rec.lang = 'en-US';
+
+  rec.onresult = (e) => {
+    let final = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) final += e.results[i][0].transcript;
+    }
+    if (final) {
+      field.value = (field.value ? field.value + ' ' : '') + final.trim();
+      field.dispatchEvent(new Event('input', {bubbles:true}));
+    }
+  };
+  rec.onerror = () => { btn.classList.remove('on'); };
+  rec.onend = () => { if (btn.classList.contains('on')) { try{rec.start();}catch(e){btn.classList.remove('on');} } };
+  try { rec.start(); toast('Listening...'); } catch(e) { btn.classList.remove('on'); toast('Mic error'); }
+
+  btn._rec = rec;
+  btn.onclick = () => {
+    btn.classList.remove('on');
+    try { btn._rec.stop(); } catch(e){}
+    btn.onclick = () => fieldMic(btn, fieldId);
+  };
+}
+
+// ===== EXPORT =====
+function updateHandoff() {
+  if (activeIdx < 0) return;
+  const p = patients[activeIdx];
+  const v = p.vitals || [];
+  let vStr = v.map(vt => `  ${vt.time}  ${String(vt.pulse).padStart(4)}  ${String(vt.rr).padStart(3)}   ${vt.avpu}   ${vt.skin}`).join('\n');
+  const s = getSettings();
+  document.getElementById('handoffPre').textContent =
+`WILDERNESS MEDICAL HANDOFF SUMMARY
+${'━'.repeat(38)}
+
+PATIENT: ${p.name||'—'} | Age ${p.age||'—'} | ${(p.gender||'—')[0]} | ${p.weight||'—'}
+INCIDENT: ${p.cc||'—'}
+ON SCENE: ${p.timeOnScene||'—'} | DATE: ${p.date||'—'}
+
+LOCATION: ${p.location||'—'}
+
+CHIEF COMPLAINT: ${p.symptoms?.substring(0,80)||'—'}
+
+VITALS:
+  Time  Pulse   RR  AVPU  Skin
+${vStr||'  (none recorded)'}
+
+ASSESSMENT: ${p.problems||'—'}
+
+ANTICIPATED: ${p.anticipated||'—'}
+
+PLAN: ${p.plan||'—'}
+
+PROVIDER: ${s.name} | ${s.cert}
+${'━'.repeat(38)}`;
+}
+
+function exportPDF() {
+  saveCurrentNote(); updateHandoff();
+  window.print();
+}
+
+function shareNote() {
+  if (!navigator.share) { toast('Share not available — use copy instead'); return; }
+  const p = patients[activeIdx];
+  const text = document.getElementById('handoffPre')?.textContent || '';
+  navigator.share({title:'SOAP Note — '+p.name, text}).catch(()=>{});
+}
+
+function copyJSON() {
+  if (activeIdx < 0) return;
+  const json = JSON.stringify(patients[activeIdx], null, 2);
+  navigator.clipboard.writeText(json).then(()=>toast('JSON copied to clipboard')).catch(()=>toast('Copy failed'));
+}
+
+function downloadJSON() {
+  if (activeIdx < 0) return;
+  const p = patients[activeIdx];
+  const blob = new Blob([JSON.stringify(p,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `soap-note-${(p.name||'patient').replace(/\s+/g,'-').toLowerCase()}-${p.date||'unknown'}.json`;
+  a.click();
+}
+
+function exportAllData() {
+  const blob = new Blob([JSON.stringify(patients,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `wfr-soap-all-data-${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  toast('All data exported');
+}
+
+function importData() { document.getElementById('importFile').click(); }
+function handleImport(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if (Array.isArray(data)) { patients = data; }
+      else if (data.name) { patients.push(data); }
+      save(); renderPatients(); toast('Data imported');
+    } catch(err) { toast('Invalid JSON file'); }
+  };
+  reader.readAsText(f);
+  e.target.value = '';
+}
+
+// ===== NAVIGATION =====
+function switchTab(id) {
+  document.querySelectorAll('.scr').forEach(s=>s.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  document.querySelectorAll('.bnav button').forEach(b=>b.classList.remove('on'));
+  const map = {homeScreen:'navH',scribeScreen:'navS',exportScreen:'navE',settingsScreen:'navSt'};
+  if (map[id]) document.getElementById(map[id]).classList.add('on');
+  const bb = document.getElementById('backBtn');
+  const tb = document.getElementById('timerBadge');
+  if (['scribeScreen','exportScreen'].includes(id)) {
+    bb.style.display='block';
+    if (activeIdx>=0) { tb.style.display='block'; }
+    document.getElementById('topT').textContent = id==='exportScreen'?'Export / Share':'SOAP Note';
+    if (id==='exportScreen') updateHandoff();
+  } else {
+    bb.style.display='none'; tb.style.display='none';
+    document.getElementById('topT').textContent='WFR SOAP Note';
+    if (id==='settingsScreen') loadSettings();
+  }
+  window.scrollTo(0,0);
+}
+function goHome() { if(activeIdx>=0) saveCurrentNote(); switchTab('homeScreen'); renderPatients(); }
+
+function setMode(m) {
+  document.getElementById('mScribe').classList.toggle('on',m==='scribe');
+  document.getElementById('mManual').classList.toggle('on',m==='manual');
+  document.getElementById('scribeView').style.display = m==='scribe'?'block':'none';
+  document.getElementById('manualView').style.display = m==='manual'?'block':'none';
+}
+
+function startSceneTimer() {
+  clearInterval(sceneInt);
+  sceneSec = 0;
+  sceneInt = setInterval(()=>{
+    sceneSec++;
+    const m=Math.floor(sceneSec/60),s=sceneSec%60;
+    document.getElementById('timerBadge').textContent=String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+  },1000);
+}
+
+function loadSettings() {
+  const s = getSettings();
+  document.getElementById('sName').value = s.name||'';
+  document.getElementById('sCert').value = s.cert||'WFR';
+  document.getElementById('sOrg').value = s.org||'';
+}
+
+// ===== UTILS =====
+function tog(btn){btn.classList.toggle('op');btn.nextElementSibling.classList.toggle('op')}
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500)}
+function loadPatients(){load();renderPatients()}
+
+// ===== INIT =====
+initSTT();
+loadPatients();
+</script>
+</body>
+</html>
